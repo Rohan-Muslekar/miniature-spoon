@@ -1,0 +1,438 @@
+<title>Synthetic Movie Data — Validate, Merge, Compare · CA2</title>
+<style>
+  :root{
+    --paper:#f7f3ec; --panel:#ffffff; --panel-2:#f1ebe0; --side:#efe8db;
+    --ink:#1c1710; --ink-2:#5f564a; --muted:#8d8172;
+    --line:#e6ddcd; --line-2:#d6ccb9;
+    --data:#b4740e; --data-wash:rgba(180,116,14,.13); --gold:#a9720d;
+    --real:#2a78d6; --real-wash:rgba(42,120,214,.12);
+    --sev-critical:#b0201a; --sev-high:#c0392b; --sev-medium:#c98207; --sev-low:#7a7060; --sev-info:#2a78d6;
+    --shadow:0 1px 2px rgba(28,23,16,.05),0 10px 26px -14px rgba(28,23,16,.22); --focus:#b4740e;
+  }
+  @media (prefers-color-scheme: dark){:root{
+    --paper:#141009; --panel:#1e1810; --panel-2:#241d13; --side:#1b1610;
+    --ink:#f6efe0; --ink-2:#bcb09a; --muted:#8b8071;
+    --line:#322b1e; --line-2:#42392a;
+    --data:#c98500; --data-wash:rgba(201,133,0,.16); --gold:#e9b44a;
+    --real:#3987e5; --real-wash:rgba(57,135,229,.16);
+    --sev-critical:#e0685b; --sev-high:#e0685b; --sev-medium:#e0a533; --sev-low:#9a8f7e; --sev-info:#3987e5;
+    --shadow:0 1px 2px rgba(0,0,0,.45),0 12px 30px -16px rgba(0,0,0,.7); --focus:#e9b44a;
+  }}
+  :root[data-theme="light"]{--paper:#f7f3ec;--panel:#ffffff;--panel-2:#f1ebe0;--side:#efe8db;--ink:#1c1710;--ink-2:#5f564a;--muted:#8d8172;--line:#e6ddcd;--line-2:#d6ccb9;--data:#b4740e;--data-wash:rgba(180,116,14,.13);--gold:#a9720d;--real:#2a78d6;--real-wash:rgba(42,120,214,.12);--sev-critical:#b0201a;--sev-high:#c0392b;--sev-medium:#c98207;--sev-low:#7a7060;--sev-info:#2a78d6;--focus:#b4740e;}
+  :root[data-theme="dark"]{--paper:#141009;--panel:#1e1810;--panel-2:#241d13;--side:#1b1610;--ink:#f6efe0;--ink-2:#bcb09a;--muted:#8b8071;--line:#322b1e;--line-2:#42392a;--data:#c98500;--data-wash:rgba(201,133,0,.16);--gold:#e9b44a;--real:#3987e5;--real-wash:rgba(57,135,229,.16);--sev-critical:#e0685b;--sev-high:#e0685b;--sev-medium:#e0a533;--sev-low:#9a8f7e;--sev-info:#3987e5;--focus:#e9b44a;}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .film{height:14px;background:var(--ink);
+    -webkit-mask:repeating-linear-gradient(90deg,#000 0 15px,transparent 15px 24px);mask:repeating-linear-gradient(90deg,#000 0 15px,transparent 15px 24px)}
+  .app{max-width:1200px;margin:0 auto;padding:0 20px 64px}
+  header.mast{padding:30px 0 20px;border-bottom:1px solid var(--line)}
+  .eyebrow{font-size:11.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);font-weight:700;margin:0 0 10px}
+  h1{font-family:Georgia,"Times New Roman",serif;font-weight:700;margin:0;font-size:clamp(28px,4.4vw,46px);line-height:1.03;letter-spacing:-.015em;text-wrap:balance}
+  h1 .amp{color:var(--data)}
+  .lede{margin:12px 0 0;max-width:74ch;color:var(--ink-2);font-size:15px}
+
+  /* tabs */
+  .tabs{display:flex;gap:6px;margin:22px 0 22px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+  .tab{font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;color:var(--ink-2);background:none;border:0;
+    padding:11px 16px;border-bottom:2px solid transparent;margin-bottom:-1px;border-radius:8px 8px 0 0}
+  .tab:hover{color:var(--ink);background:var(--panel-2)}
+  .tab[aria-selected="true"]{color:var(--data);border-bottom-color:var(--data)}
+  .tab:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+  .panel[hidden]{display:none}
+
+  section{margin-top:22px}
+  .sec-head{display:flex;align-items:baseline;gap:12px;margin:0 0 14px}
+  .sec-head h2{font-family:Georgia,serif;font-size:21px;font-weight:700;letter-spacing:-.01em;margin:0}
+  .sec-head .rule{flex:1;height:1px;background:var(--line)}
+  .sec-head .tag{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+
+  .tiles{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+  @media(max-width:1000px){.tiles{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:560px){.tiles{grid-template-columns:repeat(2,1fr)}}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 13px;box-shadow:var(--shadow)}
+  .tile.real{border-left:3px solid var(--real)} .tile.syn{border-left:3px solid var(--data)}
+  .tile .k{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .tile .v{font-family:ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-weight:700;font-size:clamp(17px,2vw,22px);margin-top:5px;letter-spacing:-.02em}
+  .tile .v.sm{font-size:15px;letter-spacing:0}
+  .tile .u{font-size:11px;color:var(--ink-2);margin-top:2px}
+
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:16px}
+  @media(max-width:760px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 16px 12px;box-shadow:var(--shadow)}
+  .card.wide{grid-column:1 / -1}
+  .card h3{margin:0;font-size:15px;font-weight:650;letter-spacing:-.005em}
+  .card .sub{margin:2px 0 10px;font-size:12px;color:var(--muted)}
+  .legend{display:flex;gap:16px;margin:2px 0 8px;font-size:12px;color:var(--ink-2);flex-wrap:wrap}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+  .empty{color:var(--muted);font-size:13px;text-align:center;padding:36px 0}
+
+  svg.chart{display:block;width:100%;height:auto;overflow:visible}
+  .grid-l{stroke:var(--line);stroke-width:1}
+  .axl{fill:var(--muted);font-size:11px;font-family:-apple-system,"Segoe UI",sans-serif}
+  .axl.num{font-family:ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+  .axcap{fill:var(--ink-2)}
+  .mark{fill:var(--data)} .mark2{fill:var(--real)}
+  .dot{fill:var(--data);fill-opacity:.5} .dot2{fill:var(--real);fill-opacity:.42}
+  .refline{stroke:var(--ink-2);stroke-width:1.4;stroke-dasharray:4 3;opacity:.55}
+  .reflab{fill:var(--ink-2);font-size:10px;font-family:ui-monospace,monospace}
+  .dlabel{fill:var(--ink-2);font-size:10.5px;font-family:ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+  .callouts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+  @media(max-width:760px){.callouts{grid-template-columns:1fr}}
+  .callout{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .callout .kick{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;font-weight:700;color:var(--data)}
+  .callout p{margin:6px 0 0;font-size:13px;color:var(--ink-2)}
+
+  .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin-top:14px;max-height:520px;overflow-y:auto}
+  table{border-collapse:collapse;width:100%;font-size:13px;min-width:640px}
+  thead th{text-align:left;padding:10px 12px;background:var(--panel-2);color:var(--ink-2);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--line);position:sticky;top:0}
+  tbody td{padding:8px 12px;border-bottom:1px solid var(--line)}
+  tbody tr:last-child td{border-bottom:0}
+  td.num{font-family:ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;text-align:right}
+  .badge{display:inline-block;font-size:10.5px;font-weight:700;font-family:ui-monospace,monospace;padding:2px 7px;border-radius:20px}
+  .badge.real{background:var(--real-wash);color:var(--real)} .badge.synthetic{background:var(--data-wash);color:var(--data)}
+  .sev{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 7px;border-radius:5px;color:#fff}
+  .sev-critical{background:var(--sev-critical)}.sev-high{background:var(--sev-high)}.sev-medium{background:var(--sev-medium)}.sev-low{background:var(--sev-low)}.sev-info{background:var(--sev-info)}
+  code{font-family:ui-monospace,Menlo,Consolas,monospace}
+  .prompt{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-size:12.5px;
+    font-family:ui-monospace,Menlo,monospace;color:var(--ink-2);white-space:pre-wrap;line-height:1.55;overflow-x:auto}
+  footer{margin-top:34px;padding-top:18px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:space-between}
+  #tip{position:fixed;z-index:60;pointer-events:none;opacity:0;transition:opacity .07s;background:var(--ink);color:var(--paper);font-size:12px;padding:7px 10px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.4);font-family:ui-monospace,Menlo,monospace;white-space:nowrap}
+  #tip b{color:var(--gold)}
+  @media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="film" aria-hidden="true"></div>
+<div class="app">
+  <header class="mast">
+    <p class="eyebrow">Data Mining · Class Activity 2 · Synthetic Data</p>
+    <h1>Synthetic Movies <span class="amp">·</span> Validate, Merge &amp; Compare</h1>
+    <p class="lede" id="lede"></p>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-tab="p_combined">① Combined dataset</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="p_compare">② Synthetic vs Real</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="p_synth">③ Synthetic analysis</button>
+  </div>
+
+  <!-- TAB 1 -->
+  <div class="panel" id="p_combined">
+    <div class="sec-head"><h2>Merging synthetic into the real catalogue</h2><span class="rule"></span><span class="tag">One source-flagged table</span></div>
+    <div class="tiles" id="combTiles"></div>
+    <div class="callouts">
+      <div class="callout"><span class="kick">How the merge works</span>
+        <p>Both tables are mapped to a shared schema — <code>source, id, title, year, genre, runtime, rating, votes</code> — then stacked.
+        Synthetic-only fields (<code>country, budget_million, revenue_million, content_rating</code>) stay empty for real rows.
+        The full merged file is saved as <code>combined_movies.csv</code>.</p></div>
+      <div class="callout"><span class="kick">Why flag the source</span>
+        <p>Mixing invented rows into real data without a marker is how synthetic data silently contaminates an analysis.
+        The <code>source</code> column keeps them separable so every later step can include, exclude, or compare them on purpose.</p></div>
+    </div>
+    <div class="sec-head" style="margin-top:24px"><h2>Preview</h2><span class="rule"></span><span class="tag">All synthetic rows + real sample</span></div>
+    <div class="tablewrap"><table id="combTbl"></table></div>
+  </div>
+
+  <!-- TAB 2 -->
+  <div class="panel" id="p_compare" hidden>
+    <div class="sec-head"><h2>Does the synthetic data look real?</h2><span class="rule"></span><span class="tag">Distributions, normalised to %</span></div>
+    <div class="legend"><span><i style="background:var(--data)"></i> Synthetic (100)</span><span><i style="background:var(--real)"></i> Real IMDb (48,577)</span></div>
+    <div class="grid">
+      <div class="card"><h3>Rating distribution</h3><p class="sub">Share of each dataset · 1-point bins</p><div id="cmp_rating"></div></div>
+      <div class="card"><h3>Runtime distribution</h3><p class="sub">Share of each dataset · 30-min bins</p><div id="cmp_runtime"></div></div>
+      <div class="card"><h3>Genre mix</h3><p class="sub">Share of each dataset · top genres</p><div id="cmp_genre"></div></div>
+      <div class="card"><h3>Films by decade</h3><p class="sub">Share of each dataset · 1980 onward</p><div id="cmp_decade"></div></div>
+      <div class="card wide"><h3>Votes vs. rating</h3><p class="sub">Synthetic sits in a narrow, tidy band; real fans across orders of magnitude · log vote axis</p><div id="cmp_scatter"></div></div>
+    </div>
+    <div class="callouts" id="cmpNotes"></div>
+  </div>
+
+  <!-- TAB 3 -->
+  <div class="panel" id="p_synth" hidden>
+    <div class="sec-head"><h2>Synthetic dataset — cleaned</h2><span class="rule"></span><span class="tag">100 fictional films</span></div>
+    <div class="tiles" id="synTiles"></div>
+    <div class="grid">
+      <div class="card"><h3>Films by genre</h3><p class="sub">Main genre (after cleaning)</p><div id="syn_genre"></div></div>
+      <div class="card"><h3>Rating distribution</h3><p class="sub">Average rating · 0.5-point bins</p><div id="syn_rating"></div></div>
+      <div class="card"><h3>Runtime distribution</h3><p class="sub">Minutes · 20-min bins</p><div id="syn_runtime"></div></div>
+      <div class="card"><h3>Films by decade</h3><p class="sub">Release decade</p><div id="syn_decade"></div></div>
+      <div class="card"><h3>Budget vs. revenue</h3><p class="sub">$ million · dashed line = break-even (revenue = budget)</p><div id="syn_money"></div></div>
+      <div class="card"><h3>Votes vs. rating</h3><p class="sub">Synthetic films · log vote axis</p><div id="syn_scatter"></div></div>
+    </div>
+
+    <div class="sec-head" style="margin-top:26px"><h2>Validation report</h2><span class="rule"></span><span class="tag" id="valTag"></span></div>
+    <div class="tablewrap"><table id="valTbl"></table></div>
+
+    <div class="grid" style="margin-top:22px">
+      <div class="card"><h3>Schema &amp; validation rules</h3><p class="sub">Declared before generation</p>
+        <div class="tablewrap" style="margin-top:8px"><table id="schemaTbl"></table></div></div>
+      <div class="card"><h3>The prompt used</h3><p class="sub">Class Activity 2 · required deliverable</p>
+        <div class="prompt" id="promptBox"></div></div>
+    </div>
+    <div class="callouts" style="margin-top:16px" id="synNotes"></div>
+  </div>
+
+  <footer>
+    <span>Synthetic data — fictional titles, invented values · not real evidence</span>
+    <span>IMDb comparison data: non-commercial datasets · educational use</span>
+  </footer>
+</div>
+<div id="tip"></div>
+
+<script>
+const DATA = {"meta":{"rawN":100,"synClean":99,"dropped":1,"realN":48577,"combinedN":48676,"issueCount":19,"revGtBudgetPct":100.0,"synMedRating":7.1,"synMedRuntime":122,"synMedVotes":53200,"realMedRating":6.4,"realMedRuntime":100},"schema":[{"col":"movie_id","type":"string","rule":"unique key","null":"no"},{"col":"title","type":"string","rule":"fictional, free text","null":"no"},{"col":"release_year","type":"integer","rule":"1980–2026","null":"no"},{"col":"genre","type":"category","rule":"one of 16 allowed genres","null":"no"},{"col":"runtime_minutes","type":"integer","rule":"60–240","null":"no"},{"col":"country","type":"string","rule":"free text","null":"yes"},{"col":"average_rating","type":"float","rule":"1.0–10.0","null":"yes"},{"col":"num_votes","type":"integer","rule":"> 0","null":"no"},{"col":"budget_million","type":"float","rule":"≥ 0","null":"yes"},{"col":"revenue_million","type":"float","rule":"≥ 0","null":"yes"},{"col":"content_rating","type":"category","rule":"G / PG / PG-13 / R / NC-17","null":"yes"}],"genresAllowed":["Action","Adventure","Animation","Comedy","Crime","Documentary","Drama","Fantasy","Horror","Musical","Mystery","Romance","Sci-Fi","Thriller","War","Western"],"validation":[{"sev":"high","rule":"duplicate movie_id","detail":"'M017' reused (title: Iron Verdict)","action":"reassigned to M018","ids":["M017"]},{"sev":"high","rule":"release_year out of range","detail":"'2035' not in 1980–2026 (title: Tomorrow Never Waits)","action":"row dropped","ids":["M009"]},{"sev":"low","rule":"inconsistent genre name","detail":"'sci-fi' (title cleanup)","action":"normalised to 'Sci-Fi'","ids":["M003"]},{"sev":"low","rule":"inconsistent genre name","detail":"'Sci Fi' (title cleanup)","action":"normalised to 'Sci-Fi'","ids":["M027"]},{"sev":"high","rule":"genre not in allowed list","detail":"'Superhero' is not one of the 16 genres","action":"reassigned to 'Action'","ids":["M039"]},{"sev":"low","rule":"inconsistent genre name","detail":"'SciFi' (title cleanup)","action":"normalised to 'Sci-Fi'","ids":["M064"]},{"sev":"low","rule":"runtime formatting","detail":"'142 min' contained non-numeric text","action":"parsed to 142","ids":["M023"]},{"sev":"high","rule":"runtime out of range","detail":"48 min not in 60–240","action":"set to missing","ids":["M055"]},{"sev":"high","rule":"rating out of range","detail":"11.5 not in 1.0–10.0","action":"set to NaN","ids":["M031"]},{"sev":"medium","rule":"missing average_rating","detail":"empty value","action":"left as NaN (excluded from rating stats)","ids":["M062"]},{"sev":"low","rule":"num_votes formatting","detail":"'12,300' had a thousands comma","action":"parsed to 12300","ids":["M012"]},{"sev":"low","rule":"num_votes not integer","detail":"'45000.5' was fractional","action":"rounded to 45000","ids":["M048"]},{"sev":"high","rule":"budget_million negative","detail":"-20.0 < 0 (impossible)","action":"set to NaN","ids":["M005"]},{"sev":"high","rule":"budget_million negative","detail":"-500.0 < 0 (impossible)","action":"set to NaN","ids":["M070"]},{"sev":"medium","rule":"missing revenue_million","detail":"empty value","action":"left as NaN","ids":["M088"]},{"sev":"low","rule":"content_rating casing","detail":"'pg-13' standardised","action":"-> 'PG-13'","ids":["M015"]},{"sev":"medium","rule":"content_rating not in allowed set","detail":"'Unrated' not in ['G', 'PG', 'PG-13', 'R', 'NC-17']","action":"set to NaN","ids":["M052"]},{"sev":"info","rule":"duplicate title","detail":"'Echoes of Tomorrow' appears 2x (different id/year — kept)","action":"kept both","ids":["M041","M077"]},{"sev":"info","rule":"hidden assumption (LLM optimism)","detail":"revenue > budget in 100.0% of rows — the model assumed every film is profitable","action":"kept, but flagged as unrealistic uniform pattern","ids":[]}],"syn":{"id":["M001","M002","M003","M004","M005","M006","M007","M008","M010","M011","M012","M013","M014","M015","M016","M017","M018","M019","M020","M021","M022","M023","M024","M025","M026","M027","M028","M029","M030","M031","M032","M033","M034","M035","M036","M037","M038","M039","M040","M041","M042","M043","M044","M045","M046","M047","M048","M049","M050","M051","M052","M053","M054","M055","M056","M057","M058","M059","M060","M061","M062","M063","M064","M065","M066","M067","M068","M069","M070","M071","M072","M073","M074","M075","M076","M077","M078","M079","M080","M081","M082","M083","M084","M085","M086","M087","M088","M089","M090","M091","M092","M093","M094","M095","M096","M097","M098","M099","M100"],"title":["The Crimson Hour","Paper Lanterns","Starbound Reverie","The Last Cartographer","Neon Requiem","Whispers in the Attic","Grandmother's Garden","Velocity Nine","The Salt Merchant","Midnight Cartoons","Fractured Skies","The Comedian's Wife","Ashes of Andromeda","Sunday Drivers","The Quiet Detective","Harbor Lights","Iron Verdict","Beneath the Willow","Rocket to Nowhere","The Glass Symphony","Dust and Diamonds","Silent Frequency","The Painted Veil Returns","Galactic Custodians","Little Fires Everywhere","Photon Drift","The Butcher of Prague","Carnival of Thieves","Featherweight","The Infinite Staircase","Coffee at Dawn","Blackout Protocol","The Woodcutter's Daughter","Meridian","Saturday Night Regulars","The Cartographer's Ghost","Redwood Requiem","Titanium Sentinel","Harvest of Stars","Echoes of Tomorrow","The Tea House Murders","Concrete Angels","Puppets of War","The Lemonade Stand","Nightingale Down","Quantum Bloom","The Forgotten Coast","Marble Hearts","The Undertaker's Apprentice","Ivory Tempest","Backroad Ballads","The Alchemist's Debt","Static Rain","Blink","The Orchard Keeper","Solar Winds","Ladies of the Canyon","The Hollow Crown Affair","Firebreak","Paper Moons","The Cartel Requiem","Winter's Envoy","Hyperion Rising","The Puppeteer","Amber Alleys","Cosmic Debris","The Beekeeper's Oath","Voltage","The Lighthouse Keeper","Neon Cathedral","Broken Compass","The Comedy Circuit","Sable Nights","The Astronomer's Wife","Thunderhead","Echoes of Tomorrow","The Salt Flats","Prism","Grandfather Clock","The Bootlegger's Daughter","Meteor Season","The Violinist","Cold Harbor","The Missing Reel","Sunflower County","Overdrive","The Glassblower","Radiant Void","The Card Sharp","Paper Tigers","The Frostbound Kingdom","Marigold Avenue","Zero Hour Sonata","The Tidewater Chronicles","Ghostlight","The Diplomat's Daughter","Supernova Lullaby","The Rainmaker's Promise","Velvet Undertow"],"year":[1998,2011,2019,2005,2022,1994,2016,2013,1987,2008,2017,2001,2020,1996,2009,1985,2014,2018,1999,2012,1991,2015,2007,2021,1989,2016,2003,2010,1997,2019,2013,2006,1993,2022,2002,2018,1988,2015,2011,2017,2004,1995,2009,2014,1999,2020,1990,2012,2007,2016,1986,2013,2019,2021,1992,2008,2001,2015,2010,1997,2018,1994,2022,2006,2013,2000,2017,2011,1989,2020,2005,2014,1996,2019,2012,2003,2016,2021,1998,1990,2015,2009,2002,2018,1993,2013,2007,2020,1995,2011,2017,1999,2014,2006,2021,2004,2019,1991,2016],"genre":["Thriller","Drama","Sci-Fi","Adventure","Action","Horror","Drama","Action","Drama","Animation","War","Comedy","Sci-Fi","Comedy","Mystery","Romance","Crime","Drama","Adventure","Musical","Western","Thriller","Drama","Action","Drama","Sci-Fi","Horror","Crime","Drama","Fantasy","Romance","Thriller","Fantasy","Sci-Fi","Comedy","Mystery","Drama","Action","Adventure","Sci-Fi","Mystery","Crime","War","Comedy","Drama","Sci-Fi","Adventure","Romance","Horror","Action","Musical","Fantasy","Thriller","Horror","Drama","Sci-Fi","Drama","Mystery","Action","Romance","Crime","Drama","Sci-Fi","Thriller","Drama","Adventure","Drama","Action","Drama","Sci-Fi","Adventure","Comedy","Crime","Drama","Action","Drama","Western","Sci-Fi","Fantasy","Crime","Sci-Fi","Musical","War","Mystery","Drama","Action","Drama","Sci-Fi","Crime","Thriller","Fantasy","Drama","Thriller","Adventure","Horror","Drama","Sci-Fi","Drama","Crime"],"runtime":[118,104,142,127,131,96,112,124,140,88,155,99,149,92,116,108,122,101,113,126,134,142,119,140,110,133,101,128,95,151,97,115,122,146,90,124,138,137,120,139,108,131,148,86,116,144,125,102,98,129,113,141,111,null,120,135,107,123,126,99,134,129,152,113,105,118,110,122,133,147,121,94,127,114,130,109,138,143,116,125,140,118,151,106,122,124,111,148,119,117,154,103,120,132,100,127,145,135,123],"country":["USA","Japan","USA","UK","South Korea","USA","France","USA","India","Japan","UK","USA","Canada","USA","UK","Italy","USA","South Korea","USA","France","USA","USA","UK","USA","USA","Japan","Germany","France","USA","UK","Italy","USA","Germany","USA","USA","UK","USA","USA","Australia","USA","Japan","USA","UK","USA","France","South Korea","Australia","Italy","USA","USA","USA","UK","Canada","USA","USA","USA","USA","UK","Australia","France","Mexico","Germany","USA","France","USA","USA","UK","South Korea","USA","Japan","UK","USA","USA","France","USA","USA","USA","Canada","Germany","USA","USA","Italy","USA","UK","USA","USA","Germany","South Korea","France","USA","UK","India","USA","Australia","USA","UK","USA","USA","USA"],"rating":[7.2,8.1,6.4,7.8,6.9,5.6,8.4,6.1,7.5,7.9,7.3,6.7,6.8,6.3,7.6,7.1,7.4,8.0,6.5,7.7,7.0,6.6,7.2,6.2,7.9,6.9,5.9,7.3,7.4,null,7.0,6.8,7.6,7.1,6.4,7.5,7.8,6.0,7.2,6.7,7.7,7.1,7.4,6.9,7.6,7.0,6.8,7.3,5.7,6.3,7.2,7.5,6.6,5.4,7.7,6.9,7.4,7.6,6.5,7.1,null,7.8,7.0,6.9,7.5,6.6,8.2,6.7,7.9,7.2,6.8,6.5,7.0,7.7,6.4,7.3,7.1,7.0,7.4,7.2,6.8,7.8,7.5,7.6,7.7,6.2,7.6,7.1,7.0,6.7,7.5,7.9,6.9,7.1,5.8,7.6,7.3,7.8,7.2],"votes":[48210,91500,152300,63400,88700,31200,42100,110400,28900,64300,12300,53800,134200,40100,58700,22400,96300,71200,49600,38400,26700,82900,44300,167800,33500,98700,41200,57600,29800,145600,36200,74300,31900,158200,47200,52800,24600,142900,61400,103500,45900,38700,49200,55300,32800,121600,45000,34600,42700,118300,27300,88400,76900,58200,25900,94100,37500,53200,89700,31200,112700,28400,171200,58300,41800,52400,64900,97300,23800,128400,47600,50900,35200,58100,106800,33900,42300,115600,30700,29600,109200,39400,44700,55800,27100,101300,36800,132700,34100,71400,97800,31500,79600,56200,63100,43900,144800,26300,60500],"budget":[42.0,8.0,180.0,55.0,null,12.0,6.0,150.0,5.0,40.0,90.0,25.0,165.0,18.0,30.0,10.0,60.0,9.0,48.0,35.0,22.0,45.0,20.0,200.0,7.0,110.0,15.0,38.0,4.0,175.0,12.0,52.0,18.0,190.0,20.0,28.0,9.0,220.0,44.0,130.0,16.0,26.0,70.0,15.0,14.0,140.0,40.0,11.0,18.0,160.0,10.0,95.0,48.0,22.0,6.0,105.0,17.0,30.0,85.0,9.0,58.0,13.0,210.0,36.0,15.0,50.0,10.0,88.0,null,150.0,42.0,18.0,24.0,12.0,145.0,14.0,28.0,135.0,16.0,20.0,125.0,22.0,80.0,26.0,8.0,130.0,11.0,155.0,19.0,46.0,140.0,5.0,50.0,60.0,25.0,18.0,170.0,10.0,34.0],"revenue":[138.0,26.0,540.0,190.0,410.0,44.0,18.0,388.0,21.0,155.0,260.0,98.0,445.0,72.0,110.0,34.0,205.0,31.0,160.0,120.0,80.0,150.0,68.0,610.0,24.0,340.0,52.0,132.0,15.0,520.0,41.0,168.0,64.0,560.0,85.0,96.0,33.0,680.0,158.0,395.0,58.0,92.0,210.0,70.0,49.0,420.0,145.0,38.0,61.0,470.0,36.0,310.0,155.0,88.0,22.0,330.0,59.0,104.0,268.0,29.0,192.0,45.0,640.0,124.0,53.0,175.0,35.0,282.0,31.0,455.0,150.0,79.0,86.0,42.0,410.0,48.0,95.0,398.0,57.0,74.0,375.0,81.0,240.0,90.0,27.0,388.0,null,470.0,68.0,152.0,430.0,19.0,162.0,198.0,94.0,63.0,510.0,37.0,118.0],"content":["R","PG-13","PG-13","PG","R","R","PG","PG-13","PG","PG","R","PG-13","PG-13","PG-13","PG-13","PG","R","PG-13","PG","PG","R","R","PG-13","PG-13","PG","PG-13","R","R","PG","PG-13","PG-13","R","PG","PG-13","R","PG-13","PG","PG-13","PG","PG-13","PG-13","R","R","PG","PG-13","PG-13","PG","PG-13","R","PG-13",null,"PG-13","R","R","PG","PG-13","PG-13","PG-13","PG-13","PG","R","PG-13","PG-13","R","PG-13","PG","PG-13","PG-13","PG","PG-13","PG","PG-13","R","PG-13","PG-13","PG-13","R","PG-13","PG","R","PG-13","PG","R","PG-13","PG","PG-13","PG-13","PG-13","R","R","PG-13","PG","R","PG","R","PG-13","PG-13","PG","R"],"decade":[1990,2010,2010,2000,2020,1990,2010,2010,1980,2000,2010,2000,2020,1990,2000,1980,2010,2010,1990,2010,1990,2010,2000,2020,1980,2010,2000,2010,1990,2010,2010,2000,1990,2020,2000,2010,1980,2010,2010,2010,2000,1990,2000,2010,1990,2020,1990,2010,2000,2010,1980,2010,2010,2020,1990,2000,2000,2010,2010,1990,2010,1990,2020,2000,2010,2000,2010,2010,1980,2020,2000,2010,1990,2010,2010,2000,2010,2020,1990,1990,2010,2000,2000,2010,1990,2010,2000,2020,1990,2010,2010,1990,2010,2000,2020,2000,2010,1990,2010]},"real":{"ratingHistPct":[0.0,0.0,0.08,0.18,0.31,0.71,1.23,2.28,3.28,5.56,8.27,12.57,17.43,19.32,16.54,8.46,2.97,0.69,0.11,0.01],"ratingEdges":[0.0,0.5,1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0,5.5,6.0,6.5,7.0,7.5,8.0,8.5,9.0,9.5,10.0],"runtimeHistPct":[0.0,0.0,0.0,0.53,2.3,17.5,38.0,21.16,10.29,5.19,3.02,1.25,0.41,0.13,0.05,0.16],"runtimeEdges":[0,15,30,45,60,75,90,105,120,135,150,165,180,195,210,225,240],"genreShare":{"Comedy":25.95,"Drama":24.02,"Action":18.18,"Crime":7.92,"Horror":6.21,"Adventure":5.82,"Biography":4.71,"Documentary":3.33,"Animation":0.8,"Thriller":0.79,"Fantasy":0.55,"Mystery":0.47,"Romance":0.35,"Sci-Fi":0.22,"Family":0.2,"(none)":0.2,"Western":0.1,"Musical":0.07,"History":0.04,"Music":0.03,"Film-Noir":0.01,"War":0.01,"Sport":0.01},"decadeShare":{"2010":29.8,"2020":19.52,"2000":17.4,"1990":8.97,"1980":6.91,"1970":5.34,"1960":4.14,"1950":3.32,"1940":2.33,"1930":1.66,"1920":0.49,"1910":0.12,"1900":0.0},"scatter":[{"v":1718,"a":7.4},{"v":68897,"a":6.1},{"v":9122,"a":6.9},{"v":13820,"a":6.2},{"v":1619,"a":6.7},{"v":12995,"a":4.9},{"v":1394,"a":7.6},{"v":1159,"a":4.7},{"v":179213,"a":8.1},{"v":1281,"a":2.1},{"v":3920,"a":5.5},{"v":6235,"a":6.5},{"v":1217,"a":5.3},{"v":23145,"a":5.9},{"v":1662,"a":6.8},{"v":4914,"a":7.2},{"v":4157,"a":7.6},{"v":1334,"a":3.1},{"v":92166,"a":7.2},{"v":1248,"a":5.5},{"v":3693,"a":4.8},{"v":42165,"a":4.1},{"v":2274,"a":6.1},{"v":7425,"a":4.6},{"v":281319,"a":7.8},{"v":1265,"a":6.6},{"v":14240,"a":6.6},{"v":2268,"a":6.8},{"v":2406,"a":4.0},{"v":5969,"a":7.0},{"v":191292,"a":6.5},{"v":1135,"a":6.8},{"v":2542,"a":7.7},{"v":1302,"a":4.4},{"v":1717,"a":6.5},{"v":3663,"a":5.0},{"v":8311,"a":5.7},{"v":1016,"a":7.8},{"v":21610,"a":8.2},{"v":1268,"a":3.7},{"v":4119,"a":7.5},{"v":2686,"a":6.3},{"v":1663,"a":7.3},{"v":3465,"a":7.3},{"v":1406,"a":4.2},{"v":607144,"a":7.6},{"v":15710,"a":8.2},{"v":16007,"a":8.1},{"v":1095,"a":6.8},{"v":4738,"a":4.7},{"v":7646,"a":7.5},{"v":8628,"a":6.8},{"v":1164,"a":3.4},{"v":4091,"a":4.9},{"v":2457,"a":6.2},{"v":161340,"a":5.6},{"v":1157,"a":4.6},{"v":6603,"a":4.8},{"v":9503,"a":6.5},{"v":403068,"a":6.7},{"v":3622,"a":8.4},{"v":1261,"a":7.0},{"v":45209,"a":6.0},{"v":92400,"a":7.7},{"v":3070,"a":7.8},{"v":8433,"a":5.2},{"v":4534,"a":6.1},{"v":1093,"a":5.4},{"v":3360,"a":7.8},{"v":5173,"a":6.2},{"v":1890,"a":4.5},{"v":244790,"a":7.1},{"v":7685,"a":6.8},{"v":229767,"a":6.3},{"v":27197,"a":6.6},{"v":7499,"a":7.1},{"v":6158,"a":6.7},{"v":38490,"a":6.3},{"v":3145,"a":7.1},{"v":6796,"a":4.6},{"v":30844,"a":6.3},{"v":90514,"a":6.4},{"v":31678,"a":5.2},{"v":3380,"a":7.2},{"v":33106,"a":7.4},{"v":3643,"a":6.6},{"v":1195,"a":4.6},{"v":1118,"a":4.5},{"v":71121,"a":5.9},{"v":4696,"a":7.1},{"v":3974,"a":6.3},{"v":15255,"a":6.8},{"v":1881,"a":8.3},{"v":2268,"a":5.7},{"v":317849,"a":8.5},{"v":1420,"a":4.5},{"v":4154,"a":6.3},{"v":1125,"a":6.6},{"v":3362,"a":5.6},{"v":2186,"a":6.7},{"v":1908,"a":6.7},{"v":1943,"a":6.5},{"v":3725,"a":5.8},{"v":2440,"a":6.7},{"v":5326,"a":6.3},{"v":1038,"a":6.2},{"v":1255,"a":7.3},{"v":1000,"a":7.3},{"v":4357,"a":4.5},{"v":4061,"a":4.6},{"v":40115,"a":7.8},{"v":7506,"a":7.2},{"v":3622,"a":3.7},{"v":1182,"a":5.7},{"v":4165,"a":6.8},{"v":1715,"a":6.0},{"v":38653,"a":4.8},{"v":2270,"a":3.9},{"v":27878,"a":7.0},{"v":1030,"a":4.2},{"v":70973,"a":6.4},{"v":3380,"a":6.5},{"v":2015,"a":6.5},{"v":89841,"a":7.1},{"v":24594,"a":7.5},{"v":83695,"a":5.5},{"v":3379,"a":7.3},{"v":14497,"a":7.0},{"v":27690,"a":7.4},{"v":117277,"a":7.3},{"v":15317,"a":6.2},{"v":13211,"a":6.8},{"v":1679,"a":6.9},{"v":1434,"a":4.5},{"v":1348,"a":4.6},{"v":2288,"a":4.0},{"v":79644,"a":4.8},{"v":86550,"a":7.2},{"v":3829,"a":6.4},{"v":7431,"a":5.8},{"v":1111,"a":6.4},{"v":161346,"a":7.1},{"v":17653,"a":6.9},{"v":2250,"a":7.8},{"v":5248,"a":8.0},{"v":8587,"a":6.6},{"v":1249,"a":5.5},{"v":183977,"a":5.6},{"v":240962,"a":7.7},{"v":3483,"a":5.5},{"v":54850,"a":7.4},{"v":1267,"a":5.2},{"v":323829,"a":7.4},{"v":1091,"a":6.3},{"v":1817,"a":5.2},{"v":1777,"a":5.9},{"v":2676,"a":3.2},{"v":4872,"a":6.4},{"v":2702,"a":4.5},{"v":31137,"a":7.8},{"v":1672,"a":5.8},{"v":1360,"a":6.1},{"v":1184,"a":4.5},{"v":938598,"a":8.2},{"v":7986,"a":4.2},{"v":1271,"a":3.0},{"v":1525,"a":7.6},{"v":2453,"a":6.9},{"v":26123,"a":7.5},{"v":1677,"a":5.0},{"v":2822,"a":3.8},{"v":3760,"a":4.1},{"v":1478,"a":6.4},{"v":1633,"a":3.0},{"v":6430,"a":5.6},{"v":1108,"a":6.9},{"v":1129,"a":7.4},{"v":26573,"a":5.5},{"v":1739,"a":6.0},{"v":1351,"a":5.2},{"v":2880,"a":7.2},{"v":9692,"a":5.5},{"v":1040,"a":6.4},{"v":1635,"a":7.5},{"v":2147,"a":2.7},{"v":148340,"a":6.6},{"v":1196,"a":6.5},{"v":2120,"a":2.4},{"v":4687,"a":7.6},{"v":4696,"a":6.8},{"v":1781,"a":4.5},{"v":16964,"a":5.4},{"v":13852,"a":4.7},{"v":3377,"a":5.6},{"v":1268,"a":6.6},{"v":2950,"a":6.5},{"v":7818,"a":6.7},{"v":4356,"a":7.0},{"v":15845,"a":6.8},{"v":1244,"a":5.4},{"v":2148,"a":7.5},{"v":5572,"a":5.5},{"v":21428,"a":7.3},{"v":1685,"a":6.7},{"v":2534,"a":6.0},{"v":7425,"a":7.7},{"v":25133,"a":7.4},{"v":8250,"a":6.8},{"v":1819,"a":4.9},{"v":1354,"a":6.8},{"v":2088,"a":5.3},{"v":10198,"a":4.7},{"v":10565,"a":5.7},{"v":1920,"a":4.8},{"v":8945,"a":4.7},{"v":7268,"a":5.7},{"v":13755,"a":8.1},{"v":66430,"a":6.1},{"v":3221,"a":4.5},{"v":1024,"a":4.8},{"v":82277,"a":6.2},{"v":69105,"a":5.7},{"v":1288,"a":7.2},{"v":11969,"a":6.3},{"v":29520,"a":6.3},{"v":2783,"a":7.6},{"v":1031186,"a":8.2},{"v":5212,"a":4.7},{"v":2502,"a":5.6},{"v":2330,"a":6.7},{"v":2167,"a":3.5},{"v":2425,"a":6.4},{"v":66131,"a":5.8},{"v":2884,"a":5.0},{"v":13088,"a":6.6},{"v":75420,"a":6.2},{"v":2849,"a":6.5},{"v":3073,"a":5.8},{"v":1063,"a":6.5},{"v":78336,"a":5.7},{"v":74282,"a":4.7},{"v":2600,"a":6.7},{"v":1919,"a":5.3},{"v":85376,"a":6.3},{"v":1817,"a":5.4},{"v":20589,"a":6.1},{"v":3344,"a":6.6},{"v":3502,"a":6.9},{"v":37923,"a":5.4},{"v":17556,"a":6.3},{"v":2343,"a":6.7},{"v":2613,"a":7.4},{"v":3165,"a":5.6},{"v":1644,"a":6.4},{"v":1703,"a":3.2},{"v":2354,"a":6.0},{"v":1297,"a":4.8},{"v":1180,"a":7.1},{"v":11774,"a":6.3},{"v":278283,"a":8.2},{"v":4644,"a":5.7},{"v":2347,"a":6.2},{"v":4960,"a":6.0},{"v":130233,"a":7.4},{"v":3097,"a":6.8},{"v":23719,"a":6.4},{"v":8398,"a":5.6},{"v":12106,"a":7.4},{"v":1648,"a":7.1},{"v":2954,"a":7.0},{"v":1063,"a":5.9},{"v":1705,"a":6.4},{"v":7495,"a":4.0},{"v":324939,"a":7.3},{"v":3415,"a":5.3},{"v":352905,"a":7.2},{"v":134299,"a":6.0},{"v":1567,"a":3.3},{"v":3006,"a":6.7},{"v":4304,"a":7.3},{"v":1947,"a":5.1},{"v":3295,"a":7.1},{"v":12301,"a":5.4},{"v":1806,"a":4.5},{"v":7851,"a":7.0},{"v":32881,"a":5.8},{"v":141282,"a":6.4},{"v":1374,"a":4.3},{"v":7213,"a":4.2},{"v":1610,"a":7.1},{"v":5915,"a":7.2},{"v":3541,"a":6.6},{"v":3001,"a":5.3},{"v":1716,"a":6.3},{"v":931601,"a":6.5},{"v":1734,"a":6.4},{"v":153065,"a":7.8},{"v":1031,"a":7.7},{"v":2294,"a":6.1},{"v":1185,"a":7.1},{"v":3499,"a":7.0},{"v":1982,"a":6.4},{"v":4333,"a":7.1},{"v":4350,"a":4.8},{"v":2334,"a":3.2},{"v":10574,"a":7.3},{"v":15178,"a":1.2},{"v":2746,"a":6.5},{"v":2890,"a":5.6},{"v":1832,"a":7.3},{"v":1322,"a":6.5},{"v":7028,"a":7.4},{"v":9324,"a":6.7},{"v":1163,"a":6.5},{"v":5806,"a":6.1},{"v":1963,"a":6.5},{"v":3074,"a":6.8},{"v":10794,"a":7.7},{"v":1403,"a":7.2},{"v":2482,"a":7.8},{"v":291647,"a":6.4},{"v":1326,"a":5.9},{"v":3850,"a":6.4},{"v":1285,"a":6.0},{"v":1466,"a":4.6},{"v":1547,"a":7.0},{"v":1001,"a":6.3},{"v":1351,"a":4.8},{"v":1763,"a":6.8},{"v":5976,"a":7.6},{"v":1216,"a":5.6},{"v":1122,"a":5.6},{"v":4155,"a":6.3},{"v":1528,"a":6.4},{"v":1542,"a":6.0},{"v":3707,"a":7.2},{"v":8483,"a":4.3},{"v":159574,"a":6.4},{"v":1436,"a":5.7},{"v":37023,"a":7.4},{"v":4217,"a":6.5},{"v":3644,"a":5.5},{"v":36952,"a":7.8},{"v":4385,"a":5.1},{"v":313631,"a":6.9},{"v":2026,"a":7.1},{"v":15310,"a":7.5},{"v":4937,"a":7.7},{"v":3957,"a":6.4},{"v":2199,"a":5.7},{"v":1643,"a":6.1},{"v":5355,"a":5.3},{"v":1635,"a":6.5},{"v":1000,"a":7.0},{"v":2104,"a":7.4},{"v":31061,"a":7.2},{"v":7935,"a":6.3},{"v":1069986,"a":8.0},{"v":9151,"a":6.5},{"v":6240,"a":7.6},{"v":2220,"a":6.2},{"v":1800,"a":6.0},{"v":1928,"a":7.3},{"v":5979,"a":6.7},{"v":1350,"a":6.1},{"v":19960,"a":5.4},{"v":9839,"a":6.4},{"v":21276,"a":7.5},{"v":9064,"a":6.2},{"v":1160,"a":5.1},{"v":12005,"a":8.0},{"v":20547,"a":7.2},{"v":1404,"a":6.2},{"v":1901,"a":5.9},{"v":1148,"a":6.6},{"v":1235,"a":6.2},{"v":1820,"a":6.6},{"v":5713,"a":4.5},{"v":1398,"a":5.8},{"v":1159,"a":5.8},{"v":3947,"a":7.4},{"v":3262,"a":6.6},{"v":11555,"a":7.4},{"v":2015,"a":6.0},{"v":2075,"a":2.7},{"v":2942,"a":5.8},{"v":2554,"a":3.4},{"v":19415,"a":4.7},{"v":17705,"a":7.2},{"v":2708,"a":6.6},{"v":1007,"a":4.4},{"v":254563,"a":7.9},{"v":4026,"a":6.6},{"v":9698,"a":7.2},{"v":4885,"a":7.5},{"v":2150,"a":6.7},{"v":38655,"a":6.6},{"v":3589,"a":6.5},{"v":6993,"a":6.3},{"v":1546,"a":5.2}]},"preview":[{"source":"synthetic","id":"M001","title":"The Crimson Hour","year":1998,"genre":"Thriller","runtime":118.0,"rating":7.2,"votes":48210},{"source":"synthetic","id":"M002","title":"Paper Lanterns","year":2011,"genre":"Drama","runtime":104.0,"rating":8.1,"votes":91500},{"source":"synthetic","id":"M003","title":"Starbound Reverie","year":2019,"genre":"Sci-Fi","runtime":142.0,"rating":6.4,"votes":152300},{"source":"synthetic","id":"M004","title":"The Last Cartographer","year":2005,"genre":"Adventure","runtime":127.0,"rating":7.8,"votes":63400},{"source":"synthetic","id":"M005","title":"Neon Requiem","year":2022,"genre":"Action","runtime":131.0,"rating":6.9,"votes":88700},{"source":"synthetic","id":"M006","title":"Whispers in the Attic","year":1994,"genre":"Horror","runtime":96.0,"rating":5.6,"votes":31200},{"source":"synthetic","id":"M007","title":"Grandmother's Garden","year":2016,"genre":"Drama","runtime":112.0,"rating":8.4,"votes":42100},{"source":"synthetic","id":"M008","title":"Velocity Nine","year":2013,"genre":"Action","runtime":124.0,"rating":6.1,"votes":110400},{"source":"synthetic","id":"M010","title":"The Salt Merchant","year":1987,"genre":"Drama","runtime":140.0,"rating":7.5,"votes":28900},{"source":"synthetic","id":"M011","title":"Midnight Cartoons","year":2008,"genre":"Animation","runtime":88.0,"rating":7.9,"votes":64300},{"source":"synthetic","id":"M012","title":"Fractured Skies","year":2017,"genre":"War","runtime":155.0,"rating":7.3,"votes":12300},{"source":"synthetic","id":"M013","title":"The Comedian's Wife","year":2001,"genre":"Comedy","runtime":99.0,"rating":6.7,"votes":53800},{"source":"synthetic","id":"M014","title":"Ashes of Andromeda","year":2020,"genre":"Sci-Fi","runtime":149.0,"rating":6.8,"votes":134200},{"source":"synthetic","id":"M015","title":"Sunday Drivers","year":1996,"genre":"Comedy","runtime":92.0,"rating":6.3,"votes":40100},{"source":"synthetic","id":"M016","title":"The Quiet Detective","year":2009,"genre":"Mystery","runtime":116.0,"rating":7.6,"votes":58700},{"source":"synthetic","id":"M017","title":"Harbor Lights","year":1985,"genre":"Romance","runtime":108.0,"rating":7.1,"votes":22400},{"source":"synthetic","id":"M018","title":"Iron Verdict","year":2014,"genre":"Crime","runtime":122.0,"rating":7.4,"votes":96300},{"source":"synthetic","id":"M019","title":"Beneath the Willow","year":2018,"genre":"Drama","runtime":101.0,"rating":8.0,"votes":71200},{"source":"synthetic","id":"M020","title":"Rocket to Nowhere","year":1999,"genre":"Adventure","runtime":113.0,"rating":6.5,"votes":49600},{"source":"synthetic","id":"M021","title":"The Glass Symphony","year":2012,"genre":"Musical","runtime":126.0,"rating":7.7,"votes":38400},{"source":"synthetic","id":"M022","title":"Dust and Diamonds","year":1991,"genre":"Western","runtime":134.0,"rating":7.0,"votes":26700},{"source":"synthetic","id":"M023","title":"Silent Frequency","year":2015,"genre":"Thriller","runtime":142.0,"rating":6.6,"votes":82900},{"source":"synthetic","id":"M024","title":"The Painted Veil Returns","year":2007,"genre":"Drama","runtime":119.0,"rating":7.2,"votes":44300},{"source":"synthetic","id":"M025","title":"Galactic Custodians","year":2021,"genre":"Action","runtime":140.0,"rating":6.2,"votes":167800},{"source":"synthetic","id":"M026","title":"Little Fires Everywhere","year":1989,"genre":"Drama","runtime":110.0,"rating":7.9,"votes":33500},{"source":"synthetic","id":"M027","title":"Photon Drift","year":2016,"genre":"Sci-Fi","runtime":133.0,"rating":6.9,"votes":98700},{"source":"synthetic","id":"M028","title":"The Butcher of Prague","year":2003,"genre":"Horror","runtime":101.0,"rating":5.9,"votes":41200},{"source":"synthetic","id":"M029","title":"Carnival of Thieves","year":2010,"genre":"Crime","runtime":128.0,"rating":7.3,"votes":57600},{"source":"synthetic","id":"M030","title":"Featherweight","year":1997,"genre":"Drama","runtime":95.0,"rating":7.4,"votes":29800},{"source":"synthetic","id":"M031","title":"The Infinite Staircase","year":2019,"genre":"Fantasy","runtime":151.0,"rating":null,"votes":145600},{"source":"synthetic","id":"M032","title":"Coffee at Dawn","year":2013,"genre":"Romance","runtime":97.0,"rating":7.0,"votes":36200},{"source":"synthetic","id":"M033","title":"Blackout Protocol","year":2006,"genre":"Thriller","runtime":115.0,"rating":6.8,"votes":74300},{"source":"synthetic","id":"M034","title":"The Woodcutter's Daughter","year":1993,"genre":"Fantasy","runtime":122.0,"rating":7.6,"votes":31900},{"source":"synthetic","id":"M035","title":"Meridian","year":2022,"genre":"Sci-Fi","runtime":146.0,"rating":7.1,"votes":158200},{"source":"synthetic","id":"M036","title":"Saturday Night Regulars","year":2002,"genre":"Comedy","runtime":90.0,"rating":6.4,"votes":47200},{"source":"synthetic","id":"M037","title":"The Cartographer's Ghost","year":2018,"genre":"Mystery","runtime":124.0,"rating":7.5,"votes":52800},{"source":"synthetic","id":"M038","title":"Redwood Requiem","year":1988,"genre":"Drama","runtime":138.0,"rating":7.8,"votes":24600},{"source":"synthetic","id":"M039","title":"Titanium Sentinel","year":2015,"genre":"Action","runtime":137.0,"rating":6.0,"votes":142900},{"source":"synthetic","id":"M040","title":"Harvest of Stars","year":2011,"genre":"Adventure","runtime":120.0,"rating":7.2,"votes":61400},{"source":"synthetic","id":"M041","title":"Echoes of Tomorrow","year":2017,"genre":"Sci-Fi","runtime":139.0,"rating":6.7,"votes":103500},{"source":"synthetic","id":"M042","title":"The Tea House Murders","year":2004,"genre":"Mystery","runtime":108.0,"rating":7.7,"votes":45900},{"source":"synthetic","id":"M043","title":"Concrete Angels","year":1995,"genre":"Crime","runtime":131.0,"rating":7.1,"votes":38700},{"source":"synthetic","id":"M044","title":"Puppets of War","year":2009,"genre":"War","runtime":148.0,"rating":7.4,"votes":49200},{"source":"synthetic","id":"M045","title":"The Lemonade Stand","year":2014,"genre":"Comedy","runtime":86.0,"rating":6.9,"votes":55300},{"source":"synthetic","id":"M046","title":"Nightingale Down","year":1999,"genre":"Drama","runtime":116.0,"rating":7.6,"votes":32800},{"source":"synthetic","id":"M047","title":"Quantum Bloom","year":2020,"genre":"Sci-Fi","runtime":144.0,"rating":7.0,"votes":121600},{"source":"synthetic","id":"M048","title":"The Forgotten Coast","year":1990,"genre":"Adventure","runtime":125.0,"rating":6.8,"votes":45000},{"source":"synthetic","id":"M049","title":"Marble Hearts","year":2012,"genre":"Romance","runtime":102.0,"rating":7.3,"votes":34600},{"source":"synthetic","id":"M050","title":"The Undertaker's Apprentice","year":2007,"genre":"Horror","runtime":98.0,"rating":5.7,"votes":42700},{"source":"synthetic","id":"M051","title":"Ivory Tempest","year":2016,"genre":"Action","runtime":129.0,"rating":6.3,"votes":118300},{"source":"synthetic","id":"M052","title":"Backroad Ballads","year":1986,"genre":"Musical","runtime":113.0,"rating":7.2,"votes":27300},{"source":"synthetic","id":"M053","title":"The Alchemist's Debt","year":2013,"genre":"Fantasy","runtime":141.0,"rating":7.5,"votes":88400},{"source":"synthetic","id":"M054","title":"Static Rain","year":2019,"genre":"Thriller","runtime":111.0,"rating":6.6,"votes":76900},{"source":"synthetic","id":"M055","title":"Blink","year":2021,"genre":"Horror","runtime":null,"rating":5.4,"votes":58200},{"source":"synthetic","id":"M056","title":"The Orchard Keeper","year":1992,"genre":"Drama","runtime":120.0,"rating":7.7,"votes":25900},{"source":"synthetic","id":"M057","title":"Solar Winds","year":2008,"genre":"Sci-Fi","runtime":135.0,"rating":6.9,"votes":94100},{"source":"synthetic","id":"M058","title":"Ladies of the Canyon","year":2001,"genre":"Drama","runtime":107.0,"rating":7.4,"votes":37500},{"source":"synthetic","id":"M059","title":"The Hollow Crown Affair","year":2015,"genre":"Mystery","runtime":123.0,"rating":7.6,"votes":53200},{"source":"synthetic","id":"M060","title":"Firebreak","year":2010,"genre":"Action","runtime":126.0,"rating":6.5,"votes":89700},{"source":"synthetic","id":"M061","title":"Paper Moons","year":1997,"genre":"Romance","runtime":99.0,"rating":7.1,"votes":31200},{"source":"real","id":"tt0046054","title":"The Master of Ballantrae","year":1953,"genre":"Action","runtime":90.0,"rating":6.4,"votes":1986},{"source":"real","id":"tt0060475","title":"The Exchange Student","year":1967,"genre":"Adventure","runtime":84.0,"rating":6.5,"votes":4127},{"source":"real","id":"tt0377038","title":"The Best Two Years","year":2004,"genre":"Comedy","runtime":112.0,"rating":7.5,"votes":1847},{"source":"real","id":"tt0102943","title":"Slacker","year":1990,"genre":"Comedy","runtime":97.0,"rating":7.0,"votes":25465},{"source":"real","id":"tt0110123","title":"In the Army Now","year":1994,"genre":"Comedy","runtime":91.0,"rating":5.0,"votes":15646},{"source":"real","id":"tt0044566","title":"Dreamboat","year":1952,"genre":"Comedy","runtime":83.0,"rating":6.6,"votes":1083},{"source":"real","id":"tt5432712","title":"Cinderella the Cat","year":2017,"genre":"Animation","runtime":86.0,"rating":6.8,"votes":1152},{"source":"real","id":"tt22022784","title":"My Dead Friend Zoe","year":2024,"genre":"Comedy","runtime":103.0,"rating":6.4,"votes":4113},{"source":"real","id":"tt0209933","title":"Beau Travail","year":1999,"genre":"Drama","runtime":92.0,"rating":7.3,"votes":18438},{"source":"real","id":"tt0038661","title":"The Jolson Story","year":1946,"genre":"Biography","runtime":128.0,"rating":7.2,"votes":1958},{"source":"real","id":"tt0288491","title":"Hi, Tereska","year":2001,"genre":"Drama","runtime":86.0,"rating":7.1,"votes":1635},{"source":"real","id":"tt0021814","title":"Dracula","year":1931,"genre":"Drama","runtime":74.0,"rating":7.3,"votes":65000},{"source":"real","id":"tt3090670","title":"Advantageous","year":2015,"genre":"Drama","runtime":90.0,"rating":6.0,"votes":6202},{"source":"real","id":"tt14614892","title":"Dragon Ball Super: Super Hero","year":2022,"genre":"Action","runtime":100.0,"rating":7.1,"votes":18983},{"source":"real","id":"tt0104201","title":"Equinox","year":1992,"genre":"Crime","runtime":110.0,"rating":5.6,"votes":1430},{"source":"real","id":"tt0419641","title":"Chromophobia","year":2005,"genre":"Drama","runtime":136.0,"rating":6.1,"votes":2254},{"source":"real","id":"tt0308055","title":"Bobby","year":2006,"genre":"Biography","runtime":117.0,"rating":7.0,"votes":43971},{"source":"real","id":"tt5783956","title":"When We First Met","year":2018,"genre":"Comedy","runtime":97.0,"rating":6.4,"votes":57311},{"source":"real","id":"tt2177511","title":"Caesar Must Die","year":2012,"genre":"Drama","runtime":77.0,"rating":7.3,"votes":7035},{"source":"real","id":"tt34930723","title":"Mithde","year":2025,"genre":"Comedy","runtime":126.0,"rating":5.9,"votes":1303},{"source":"real","id":"tt0065566","title":"The Computer Wore Tennis Shoes","year":1969,"genre":"Comedy","runtime":91.0,"rating":6.0,"votes":6471},{"source":"real","id":"tt10300570","title":"Kadaisi Vivasayi","year":2021,"genre":"Drama","runtime":122.0,"rating":8.7,"votes":10738},{"source":"real","id":"tt1796603","title":"The Best Movie 3-DE","year":2011,"genre":"Comedy","runtime":105.0,"rating":2.8,"votes":1313},{"source":"real","id":"tt0092906","title":"Dolls","year":1986,"genre":"Horror","runtime":77.0,"rating":6.3,"votes":14429},{"source":"real","id":"tt0094656","title":"Angel III: The Final Chapter","year":1988,"genre":"Action","runtime":99.0,"rating":4.9,"votes":1057},{"source":"real","id":"tt20860736","title":"Catching Dust","year":2023,"genre":"Thriller","runtime":96.0,"rating":5.6,"votes":1312},{"source":"real","id":"tt0327084","title":"Over the Hedge","year":2006,"genre":"Adventure","runtime":83.0,"rating":6.7,"votes":204179},{"source":"real","id":"tt0378306","title":"Shadow of Fear","year":2004,"genre":"Thriller","runtime":88.0,"rating":5.1,"votes":1933},{"source":"real","id":"tt15373594","title":"Ashoka Vanamlo Arjuna Kalyanam","year":2022,"genre":"Drama","runtime":149.0,"rating":7.4,"votes":1982},{"source":"real","id":"tt0052378","title":"War of the Colossal Beast","year":1958,"genre":"Horror","runtime":69.0,"rating":4.0,"votes":2911},{"source":"real","id":"tt0093870","title":"RoboCop","year":1987,"genre":"Action","runtime":102.0,"rating":7.6,"votes":309919},{"source":"real","id":"tt0986264","title":"Like Stars on Earth","year":2007,"genre":"Drama","runtime":162.0,"rating":8.3,"votes":233748},{"source":"real","id":"tt5836316","title":"The Last Movie Star","year":2017,"genre":"Drama","runtime":94.0,"rating":7.0,"votes":5361},{"source":"real","id":"tt35498472","title":"Bramhanda","year":2025,"genre":"(none)","runtime":133.0,"rating":6.0,"votes":2025},{"source":"real","id":"tt2334593","title":"Cas & Dylan","year":2013,"genre":"Comedy","runtime":90.0,"rating":6.7,"votes":2122},{"source":"real","id":"tt6842770","title":"Wild Mountain Thyme","year":2020,"genre":"Comedy","runtime":102.0,"rating":5.8,"votes":14197},{"source":"real","id":"tt34942632","title":"Pratyartha","year":2025,"genre":"Comedy","runtime":139.0,"rating":7.1,"votes":2185},{"source":"real","id":"tt0030241","title":"Holiday","year":1938,"genre":"Comedy","runtime":95.0,"rating":7.7,"votes":20248},{"source":"real","id":"tt0048280","title":"Lady and the Tramp","year":1955,"genre":"Adventure","runtime":76.0,"rating":7.3,"votes":162570},{"source":"real","id":"tt1620466","title":"Single by Contract","year":2010,"genre":"Comedy","runtime":103.0,"rating":6.5,"votes":2431}]};
+const NS="http://www.w3.org/2000/svg";
+function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function fmt(n){n=+n;const s=n<0?"-":"";n=Math.abs(n);if(n>=1e9)return s+(n/1e9).toFixed(n%1e9?1:0)+"B";
+  if(n>=1e6)return s+(n/1e6).toFixed(n%1e6?1:0)+"M";if(n>=1e3)return s+(n/1e3).toFixed(n%1e3&&n<1e4?1:0)+"K";return s+n;}
+function commas(n){return (+n).toLocaleString("en-US");}
+function median(a){a=a.filter(x=>x!=null);if(!a.length)return NaN;a=Float64Array.from(a).sort();const m=a.length>>1;return a.length%2?a[m]:(a[m-1]+a[m])/2;}
+function minOf(a){let m=Infinity;for(const x of a)if(x!=null&&x<m)m=x;return m;}
+function maxOf(a){let m=-Infinity;for(const x of a)if(x!=null&&x>m)m=x;return m;}
+const tip=document.getElementById("tip");
+function bindTip(n,h){n.addEventListener("mousemove",e=>{tip.innerHTML=h;tip.style.opacity=1;
+  let x=e.clientX+12,y=e.clientY+12;const r=tip.getBoundingClientRect();
+  if(x+r.width>innerWidth)x=e.clientX-r.width-12;if(y+r.height>innerHeight)y=e.clientY-r.height-12;
+  tip.style.left=x+"px";tip.style.top=y+"px";});n.addEventListener("mouseleave",()=>tip.style.opacity=0);}
+function clear(id){const m=document.getElementById(id);m.innerHTML="";return m;}
+function niceTicks(max,c){if(max<=0)return[0,1];const raw=max/c,mag=Math.pow(10,Math.floor(Math.log10(raw))),nm=raw/mag;
+  const step=(nm<1.5?1:nm<3?2:nm<7?5:10)*mag;const t=[];for(let x=0;x<=max+step*.5;x+=step)t.push(+(x).toFixed(4));
+  if(t[t.length-1]<max)t.push(+(t[t.length-1]+step).toFixed(4));return t;}
+function esc(s){return String(s).replace(/[&<]/g,c=>c==="&"?"&amp;":"&lt;");}
+
+/* single-series vertical bars */
+function vbars(id,items,{xlab,tipfn,everyOther,cls="mark"}={}){
+  const m=clear(id);if(!items.length){m.innerHTML='<div class="empty">No data</div>';return;}
+  const W=720,H=330,L=48,R=14,T=16,B=50,iw=W-L-R,ih=H-T-B;
+  const svg=el("svg",{class:"chart",viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":xlab});
+  const max=Math.max(...items.map(d=>d.count),1),tk=niceTicks(max,4),top=tk[tk.length-1];
+  tk.forEach(t=>{const y=T+ih-ih*(t/top);svg.appendChild(el("line",{class:"grid-l",x1:L,y1:y,x2:W-R,y2:y}));
+    const x=el("text",{class:"axl num",x:L-8,y:y+3.5,"text-anchor":"end"});x.textContent=fmt(t);svg.appendChild(x);});
+  const n=items.length,gap=Math.min(10,iw/n*.3),bw=iw/n-gap;
+  items.forEach((d,i)=>{const x=L+i*(iw/n)+gap/2,h=ih*(d.count/top),y=T+ih-h,r=Math.min(4,bw/2);
+    const b=el("rect",{class:cls,x,y,width:Math.max(1,bw),height:Math.max(0,h),rx:r,ry:r});bindTip(b,tipfn(d));svg.appendChild(b);
+    if(!everyOther||i%everyOther===0){const tx=el("text",{class:"axl",x:x+bw/2,y:H-B+18,"text-anchor":"middle"});tx.textContent=d.label;svg.appendChild(tx);}});
+  const xl=el("text",{class:"axl axcap",x:L+iw/2,y:H-5,"text-anchor":"middle"});xl.textContent=xlab;svg.appendChild(xl);
+  m.appendChild(svg);
+}
+/* grouped 2-series bars (percent) */
+function gbars(id,cats,A,B,{unit="%",tipA,tipB}={}){
+  const m=clear(id);const W=720,H=330,L=44,R=14,T=14,Bm=52,iw=W-L-R,ih=H-T-Bm;
+  const svg=el("svg",{class:"chart",viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"comparison"});
+  const max=Math.max(...A,...B,1),tk=niceTicks(max,4),top=tk[tk.length-1];
+  tk.forEach(t=>{const y=T+ih-ih*(t/top);svg.appendChild(el("line",{class:"grid-l",x1:L,y1:y,x2:W-R,y2:y}));
+    const x=el("text",{class:"axl num",x:L-8,y:y+3.5,"text-anchor":"end"});x.textContent=t+unit;svg.appendChild(x);});
+  const n=cats.length,gw=iw/n,pad=gw*0.18,bw=(gw-2*pad)/2;
+  cats.forEach((c,i)=>{const gx=L+i*gw+pad;
+    const ha=ih*(A[i]/top),hb=ih*(B[i]/top);
+    const ba=el("rect",{class:"mark",x:gx,y:T+ih-ha,width:bw,height:Math.max(0,ha),rx:3,ry:3});bindTip(ba,tipA(c,A[i]));svg.appendChild(ba);
+    const bb=el("rect",{class:"mark2",x:gx+bw,y:T+ih-hb,width:bw,height:Math.max(0,hb),rx:3,ry:3});bindTip(bb,tipB(c,B[i]));svg.appendChild(bb);
+    const tx=el("text",{class:"axl",x:gx+bw,y:H-Bm+18,"text-anchor":"middle"});tx.textContent=c;svg.appendChild(tx);});
+  m.appendChild(svg);
+}
+/* horizontal bars */
+function hbars(id,items,{valfn,fixed}={}){
+  const m=clear(id);if(!items.length){m.innerHTML='<div class="empty">No data</div>';return;}
+  const rowH=Math.max(23,290/items.length),W=720,L=120,R=48,T=6,B=8,H=T+B+items.length*rowH,iw=W-L-R;
+  const svg=el("svg",{class:"chart",viewBox:`0 0 ${W} ${H}`,role:"img"});
+  const max=Math.max(...items.map(valfn),1),sx=v=>L+iw*(v/max);
+  items.forEach((d,i)=>{const y=T+i*rowH,val=valfn(d),bw=sx(val)-L,h=rowH-8;
+    const b=el("rect",{class:"mark",x:L,y:y+4,width:Math.max(1,bw),height:h,rx:4,ry:4});bindTip(b,d.tip);svg.appendChild(b);
+    const lab=el("text",{class:"axl axcap",x:L-9,y:y+4+h/2+4,"text-anchor":"end"});lab.textContent=d.label;svg.appendChild(lab);
+    const vl=el("text",{class:"dlabel",x:L+bw+7,y:y+4+h/2+4});vl.textContent=fixed?val.toFixed(2):commas(val);svg.appendChild(vl);});
+  m.appendChild(svg);
+}
+/* scatter: log x. series = [{pts,cls,name}] */
+function scatterLog(id,series,{ylab="Average rating"}={}){
+  const all=series.flatMap(s=>s.pts);const m=clear(id);if(!all.length){m.innerHTML='<div class="empty">No data</div>';return;}
+  const W=720,H=330,L=48,R=14,T=12,B=46,iw=W-L-R,ih=H-T-B;
+  const svg=el("svg",{class:"chart",viewBox:`0 0 ${W} ${H}`,role:"img"});
+  const lx=v=>Math.log10(Math.max(v,1)),xmin=Math.min(...all.map(p=>lx(p.v))),xmax=Math.max(...all.map(p=>lx(p.v))),sp=Math.max(xmax-xmin,.3);
+  const sx=v=>L+iw*((lx(v)-xmin)/sp),sy=r=>T+ih-ih*(r/10);
+  [0,2,4,6,8,10].forEach(r=>{const y=sy(r);svg.appendChild(el("line",{class:"grid-l",x1:L,y1:y,x2:W-R,y2:y}));
+    const t=el("text",{class:"axl num",x:L-8,y:y+3.5,"text-anchor":"end"});t.textContent=r;svg.appendChild(t);});
+  [[1000,"1K"],[10000,"10K"],[100000,"100K"],[1000000,"1M"]].forEach(([v,l])=>{if(lx(v)<xmin-.05||lx(v)>xmax+.05)return;
+    const x=sx(v);svg.appendChild(el("line",{class:"grid-l",x1:x,y1:T,x2:x,y2:H-B}));
+    const t=el("text",{class:"axl num",x,y:H-B+18,"text-anchor":"middle"});t.textContent=l;svg.appendChild(t);});
+  series.forEach(s=>s.pts.forEach(p=>{const c=el("circle",{class:s.cls,cx:sx(p.v),cy:sy(p.a),r:3});
+    bindTip(c,`<b>${p.t?esc(p.t)+" · ":s.name+" · "}</b>${commas(p.v)} votes · ${p.a}`);svg.appendChild(c);}));
+  const xl=el("text",{class:"axl axcap",x:L+iw/2,y:H-5,"text-anchor":"middle"});xl.textContent="Number of votes (log scale)";svg.appendChild(xl);
+  const yl=el("text",{class:"axl axcap",x:-(T+ih/2),y:12,"text-anchor":"middle",transform:"rotate(-90)"});yl.textContent=ylab;svg.appendChild(yl);
+  m.appendChild(svg);
+}
+/* linear scatter (budget vs revenue) with identity line */
+function scatterXY(id,pts,{xlab,ylab,identity}={}){
+  const m=clear(id);if(!pts.length){m.innerHTML='<div class="empty">No data</div>';return;}
+  const W=720,H=330,L=52,R=16,T=14,B=46,iw=W-L-R,ih=H-T-B;
+  const svg=el("svg",{class:"chart",viewBox:`0 0 ${W} ${H}`,role:"img"});
+  const max=Math.max(maxOf(pts.map(p=>p.x)),maxOf(pts.map(p=>p.y)),1),tk=niceTicks(max,5),top=tk[tk.length-1];
+  const sx=v=>L+iw*(v/top),sy=v=>T+ih-ih*(v/top);
+  tk.forEach(t=>{const y=sy(t);svg.appendChild(el("line",{class:"grid-l",x1:L,y1:y,x2:W-R,y2:y}));
+    const tx=el("text",{class:"axl num",x:L-8,y:y+3.5,"text-anchor":"end"});tx.textContent=fmt(t);svg.appendChild(tx);
+    const x=sx(t);const bx=el("text",{class:"axl num",x,y:H-B+18,"text-anchor":"middle"});bx.textContent=fmt(t);svg.appendChild(bx);
+    svg.appendChild(el("line",{class:"grid-l",x1:x,y1:T,x2:x,y2:H-B}));});
+  if(identity){svg.appendChild(el("line",{class:"refline",x1:sx(0),y1:sy(0),x2:sx(top),y2:sy(top)}));
+    const rl=el("text",{class:"reflab",x:sx(top)-64,y:sy(top)+14});rl.textContent="revenue = budget";svg.appendChild(rl);}
+  pts.forEach(p=>{const c=el("circle",{class:"dot",cx:sx(p.x),cy:sy(p.y),r:3.4});bindTip(c,p.tip);svg.appendChild(c);});
+  const xl=el("text",{class:"axl axcap",x:L+iw/2,y:H-5,"text-anchor":"middle"});xl.textContent=xlab;svg.appendChild(xl);
+  const yl=el("text",{class:"axl axcap",x:-(T+ih/2),y:13,"text-anchor":"middle",transform:"rotate(-90)"});yl.textContent=ylab;svg.appendChild(yl);
+  m.appendChild(svg);
+}
+
+/* ---------- data prep ---------- */
+const S=DATA.syn, M=DATA.meta;
+const idxAll=S.id.map((_,i)=>i);
+function col(name){return S[name];}
+function nn(name){return S[name].filter(x=>x!=null);}   // non-null
+
+function pctHist(vals,edges){const h=new Array(edges.length-1).fill(0);let tot=0;
+  vals.forEach(v=>{for(let k=0;k<edges.length-1;k++){if(v>=edges[k]&&(v<edges[k+1]||(k===edges.length-2&&v<=edges[k+1]))){h[k]++;tot++;break;}}});
+  return h.map(c=>tot?100*c/tot:0);}
+
+/* ---------- TAB 1: combined ---------- */
+function renderCombined(){
+  const t=document.getElementById("combTiles");
+  t.innerHTML=[
+    ['syn','Synthetic rows',commas(M.synClean),`of ${M.rawN} generated`],
+    ['real','Real IMDb rows',fmt(M.realN),'from Activity 1'],
+    ['','Combined total',commas(M.combinedN),'in combined_movies.csv'],
+    ['','Shared columns','8','+ 4 synthetic-only'],
+    ['','Rows dropped',M.dropped,'failed validation'],
+    ['','Issues logged',M.issueCount,'see tab ③'],
+  ].map(([c,k,v,u])=>`<div class="tile ${c}"><div class="k">${k}</div><div class="v${String(v).length>7?' sm':''}">${v}</div><div class="u">${u}</div></div>`).join('');
+  const tb=document.getElementById("combTbl");
+  let h='<thead><tr><th>Source</th><th>ID</th><th>Title</th><th style="text-align:right">Year</th><th>Genre</th><th style="text-align:right">Runtime</th><th style="text-align:right">Rating</th><th style="text-align:right">Votes</th></tr></thead><tbody>';
+  DATA.preview.forEach(r=>{h+=`<tr><td><span class="badge ${r.source}">${r.source}</span></td><td class="num">${esc(r.id)}</td>`+
+    `<td>${esc(r.title)}</td><td class="num">${r.year??''}</td><td>${esc(r.genre??'')}</td>`+
+    `<td class="num">${r.runtime==null?'—':Math.round(r.runtime)}</td><td class="num">${r.rating==null?'—':(+r.rating).toFixed(1)}</td>`+
+    `<td class="num">${r.votes==null?'—':commas(Math.round(r.votes))}</td></tr>`;});
+  tb.innerHTML=h+'</tbody>';
+}
+
+/* ---------- TAB 2: comparison ---------- */
+function realBinsAgg(pctArr,edges,groupBy){ // combine adjacent bins
+  const out=[];for(let i=0;i<pctArr.length;i+=groupBy){let s=0;for(let j=i;j<i+groupBy&&j<pctArr.length;j++)s+=pctArr[j];out.push(s);}return out;}
+function renderCompare(){
+  // rating: 1-pt bins 1..10
+  const rEdges=[];for(let x=1;x<=10;x++)rEdges.push(x);rEdges.push(10.0001);
+  const synR=pctHist(nn('rating'),rEdges);
+  // real rating comes at 0.5 bins over 0..10 (20 bins). group into 1.0 bins -> 10, then take 1..10 => indices 1..9 + last
+  const realR1=realBinsAgg(DATA.real.ratingHistPct,DATA.real.ratingEdges,2); // 10 bins 0-1,1-2,...9-10
+  const rCats=[];const synRv=[],realRv=[];
+  for(let x=1;x<=9;x++){rCats.push(x+'');synRv.push(+synR[x-1].toFixed(2));realRv.push(+realR1[x].toFixed(2));}
+  gbars('cmp_rating',rCats,synRv,realRv,{tipA:(c,v)=>`<b>Synthetic</b> ${c}–${+c+1}: ${v.toFixed(1)}%`,tipB:(c,v)=>`<b>Real</b> ${c}–${+c+1}: ${v.toFixed(1)}%`});
+  // runtime: 30-min bins 60..240
+  const tEdges=[60,90,120,150,180,210,240.0001];
+  const synT=pctHist(nn('runtime'),tEdges);
+  const realT30=realBinsAgg(DATA.real.runtimeHistPct,DATA.real.runtimeEdges,2); // 30-min bins from 0
+  const tCats=['60','90','120','150','180','210'],synTv=[],realTv=[];
+  tCats.forEach((c,i)=>{synTv.push(+synT[i].toFixed(2));const ri=Math.floor((+c)/30);realTv.push(+((realT30[ri]||0)).toFixed(2));});
+  gbars('cmp_runtime',tCats,synTv,realTv,{tipA:(c,v)=>`<b>Synthetic</b> ${c}–${+c+30}m: ${v.toFixed(1)}%`,tipB:(c,v)=>`<b>Real</b> ${c}–${+c+30}m: ${v.toFixed(1)}%`});
+  // genre share
+  const gc={};nn('genre').forEach(g=>gc[g]=(gc[g]||0)+1);const gtot=nn('genre').length;
+  const synG={};Object.keys(gc).forEach(g=>synG[g]=100*gc[g]/gtot);
+  const gset=[...new Set([...Object.keys(synG),...Object.keys(DATA.real.genreShare)])];
+  gset.sort((a,b)=>(DATA.real.genreShare[b]||0)+(synG[b]||0)-((DATA.real.genreShare[a]||0)+(synG[a]||0)));
+  const gCats=gset.slice(0,9),synGv=[],realGv=[];
+  gCats.forEach(g=>{synGv.push(+(synG[g]||0).toFixed(2));realGv.push(+((DATA.real.genreShare[g]||0)).toFixed(2));});
+  gbars('cmp_genre',gCats.map(g=>g.length>6?g.slice(0,5)+'…':g),synGv,realGv,
+    {tipA:(c,v,i)=>`<b>Synthetic</b>: ${v.toFixed(1)}%`,tipB:(c,v)=>`<b>Real</b>: ${v.toFixed(1)}%`});
+  // decade share (1980..2020)
+  const dc={};col('decade').forEach(d=>dc[d]=(dc[d]||0)+1);const dtot=S.decade.length;
+  const dCats=[1980,1990,2000,2010,2020];const synDv=[],realDv=[];
+  dCats.forEach(d=>{synDv.push(+((100*(dc[d]||0)/dtot)).toFixed(2));realDv.push(+((DATA.real.decadeShare[d]||0)).toFixed(2));});
+  gbars('cmp_decade',dCats.map(d=>"'"+String(d).slice(2)),synDv,realDv,
+    {tipA:(c,v)=>`<b>Synthetic</b> ${c}s: ${v.toFixed(1)}%`,tipB:(c,v)=>`<b>Real</b> ${c}s: ${v.toFixed(1)}%`});
+  // scatter overlay
+  const synPts=[];for(let i=0;i<S.id.length;i++)if(S.votes[i]!=null&&S.rating[i]!=null)synPts.push({v:S.votes[i],a:S.rating[i],t:S.title[i]});
+  scatterLog('cmp_scatter',[{pts:DATA.real.scatter,cls:'dot2',name:'Real'},{pts:synPts,cls:'dot',name:'Synthetic'}]);
+  // notes
+  document.getElementById("cmpNotes").innerHTML=[
+    ['Too uniform',`Synthetic ratings crowd into ${M.synMedRating} ± a point with almost nothing below 5 — real ratings spread far wider (median ${M.realMedRating}). The LLM avoided extremes.`],
+    ['Hidden assumption',`Revenue exceeds budget in ${M.revGtBudgetPct}% of synthetic films. The model quietly assumed every movie is profitable — a correlation the real world does not guarantee.`],
+    ['Narrow vote band',`Synthetic vote counts sit in a tidy 20K–170K strip; real films range from 1K to well over 1M. Invented popularity lacks the long tail.`],
+    ['Genre skew',`The model over-produced Drama and Sci-Fi and under-produced Documentary/Animation relative to the real catalogue.`],
+  ].map(([k,p])=>`<div class="callout"><span class="kick">${k}</span><p>${p}</p></div>`).join('');
+}
+
+/* ---------- TAB 3: synthetic ---------- */
+function renderSynth(){
+  const gc={};nn('genre').forEach(g=>gc[g]=(gc[g]||0)+1);
+  const topGenre=Object.keys(gc).sort((a,b)=>gc[b]-gc[a])[0];
+  document.getElementById("synTiles").innerHTML=[
+    ['Films (clean)',commas(M.synClean),`of ${M.rawN} raw`],
+    ['Median rating',M.synMedRating,'of 10'],
+    ['Median runtime',M.synMedRuntime,'minutes'],
+    ['Top genre',topGenre,gc[topGenre]+' films'],
+    ['Revenue > budget',M.revGtBudgetPct+'%','of films'],
+    ['Issues fixed',M.issueCount,'in cleaning'],
+  ].map(([k,v,u])=>`<div class="tile"><div class="k">${k}</div><div class="v${String(v).length>7?' sm':''}">${v}</div><div class="u">${u}</div></div>`).join('');
+
+  const gItems=Object.keys(gc).map(g=>({label:g,count:gc[g],tip:`<b>${g}</b> · ${gc[g]} films`})).sort((a,b)=>b.count-a.count);
+  hbars('syn_genre',gItems,{valfn:d=>d.count});
+  // rating hist 0.5
+  const rE=[];for(let x=0;x<=10;x+=0.5)rE.push(x);const rh=new Array(rE.length-1).fill(0);
+  nn('rating').forEach(v=>{let k=Math.min(rE.length-2,Math.floor(v/0.5));if(k>=0)rh[k]++;});
+  const rItems=[];for(let k=0;k<rh.length;k++){const lo=rE[k];if(rh[k]>0||(lo>=4&&lo<=9))rItems.push({label:lo.toFixed(1),count:rh[k],lo});}
+  vbars('syn_rating',rItems,{xlab:'Average rating',everyOther:2,tipfn:d=>`<b>${d.lo.toFixed(1)}–${(d.lo+0.5).toFixed(1)}</b> · ${d.count} films`});
+  // runtime 20-min
+  const th=new Array(13).fill(0);nn('runtime').forEach(v=>{let k=Math.min(12,Math.floor(v/20));if(k>=0)th[k]++;});
+  const tItems=[];for(let k=0;k<13;k++){if(th[k]>0)tItems.push({label:k*20,count:th[k],lo:k*20});}
+  vbars('syn_runtime',tItems,{xlab:'Runtime (minutes)',everyOther:2,tipfn:d=>`<b>${d.lo}–${d.lo+20}m</b> · ${d.count} films`});
+  // decade
+  const dc={};col('decade').forEach(d=>dc[d]=(dc[d]||0)+1);
+  const dItems=Object.keys(dc).map(Number).sort((a,b)=>a-b).map(d=>({label:"'"+String(d).slice(2),count:dc[d],decade:d}));
+  vbars('syn_decade',dItems,{xlab:'Release decade',tipfn:d=>`<b>${d.decade}s</b> · ${d.count} films`});
+  // budget vs revenue
+  const money=[];for(let i=0;i<S.id.length;i++)if(S.budget[i]!=null&&S.revenue[i]!=null)
+    money.push({x:S.budget[i],y:S.revenue[i],tip:`<b>${esc(S.title[i])}</b> · $${S.budget[i]}M → $${S.revenue[i]}M`});
+  scatterXY('syn_money',money,{xlab:'Budget ($M)',ylab:'Revenue ($M)',identity:true});
+  // votes vs rating
+  const sc=[];for(let i=0;i<S.id.length;i++)if(S.votes[i]!=null&&S.rating[i]!=null)sc.push({v:S.votes[i],a:S.rating[i],t:S.title[i]});
+  scatterLog('syn_scatter',[{pts:sc,cls:'dot',name:'Synthetic'}]);
+
+  // validation report
+  const order={critical:0,high:1,medium:2,low:3,info:4};
+  const rows=DATA.validation.slice().sort((a,b)=>order[a.sev]-order[b.sev]);
+  document.getElementById("valTag").textContent=rows.length+' issues';
+  let vh='<thead><tr><th>Severity</th><th>Rule</th><th>Detail</th><th>Action taken</th><th>Rows</th></tr></thead><tbody>';
+  rows.forEach(r=>{vh+=`<tr><td><span class="sev sev-${r.sev}">${r.sev}</span></td><td>${esc(r.rule)}</td>`+
+    `<td>${esc(r.detail)}</td><td>${esc(r.action)}</td><td class="num">${r.ids.length?esc(r.ids.slice(0,4).join(', '))+(r.ids.length>4?'…':''):'—'}</td></tr>`;});
+  document.getElementById("valTbl").innerHTML=vh+'</tbody>';
+
+  // schema
+  let sh='<thead><tr><th>Column</th><th>Type</th><th>Rule / range</th><th>Null?</th></tr></thead><tbody>';
+  DATA.schema.forEach(s=>{sh+=`<tr><td><code>${s.col}</code></td><td>${s.type}</td><td>${esc(s.rule)}</td><td>${s.null}</td></tr>`;});
+  document.getElementById("schemaTbl").innerHTML=sh+'</tbody>';
+
+  document.getElementById("promptBox").textContent=
+`Create a synthetic dataset of 100 fictional movies in CSV format.
+Include: movie_id, title, release_year, genre, runtime_minutes,
+country, average_rating, num_votes, budget_million,
+revenue_million, content_rating.
+Use only fictional titles. Years 1980–2026. Runtime 60–240.
+Ratings 1.0–10.0. Genre from a fixed list of 16.
+Realistic but fictional values. Return only the CSV table.`;
+
+  document.getElementById("synNotes").innerHTML=[
+    ['Data-quality issue found',`The model reused the id <code>M017</code> for two films, wrote <code>"142 min"</code> and <code>"12,300"</code> as text, invented a "Superhero" genre and a year of 2035, and produced a rating of 11.5 — none caught by the model itself.`],
+    ['Correction made',`Duplicate id reassigned, units/commas stripped, "Superhero"→Action, out-of-range year row dropped, impossible rating/runtime/negative-budget values set to missing. ${M.dropped} row dropped, ${M.synClean} kept.`],
+    ['Limitation of LLM data',`Even after cleaning it is too tidy: ratings hug ${M.synMedRating}, revenue beats budget ${M.revGtBudgetPct}% of the time, and votes fill a narrow band. Good for a quick prototype — not a substitute for real, messy, long-tailed data.`],
+  ].map(([k,p])=>`<div class="callout"><span class="kick">${k}</span><p>${p}</p></div>`).join('');
+}
+
+/* ---------- tabs ---------- */
+const tabs=[...document.querySelectorAll('.tab')];const rendered={};
+function show(id){
+  tabs.forEach(t=>{const on=t.dataset.tab===id;t.setAttribute('aria-selected',on);document.getElementById(t.dataset.tab).hidden=!on;});
+  if(!rendered[id]){({p_combined:renderCombined,p_compare:renderCompare,p_synth:renderSynth}[id])();rendered[id]=true;}
+}
+tabs.forEach(t=>t.addEventListener('click',()=>show(t.dataset.tab)));
+document.getElementById("lede").innerHTML=
+  `An LLM generated <b>100 fictional movies</b>. Here we <b>validate</b> them (${M.issueCount} issues found), <b>clean</b> them, `+
+  `<b>merge</b> them into the ${fmt(M.realN)}-film real IMDb table, and <b>compare</b> the two. Synthetic data is useful for prototyping — but it must be checked, never trusted.`;
+show('p_combined');
+</script>

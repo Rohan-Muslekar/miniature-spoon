@@ -1,0 +1,22 @@
+PROMPT USED TO GENERATE THE SYNTHETIC DATASET
+=============================================
+(Class Activity 2 — required deliverable)
+
+"Create a synthetic dataset of 100 fictional movies in CSV format.
+Include the columns: movie_id, title, release_year, genre, runtime_minutes,
+country, average_rating, num_votes, budget_million, revenue_million, and
+content_rating.
+Use only fictional movie titles.
+Use release years between 1980 and 2026.
+Use runtime values between 60 and 240 minutes.
+Use average ratings between 1.0 and 10.0.
+Use a genre from: Action, Adventure, Animation, Comedy, Crime, Documentary,
+Drama, Fantasy, Horror, Musical, Mystery, Romance, Sci-Fi, Thriller, War, Western.
+Use content_rating from: G, PG, PG-13, R, NC-17.
+Use realistic but fictional values.
+Do not include explanations. Return only the CSV table."
+
+NOTE: The file synthetic_movies_raw.csv is the *unedited* model output. It is
+deliberately kept raw so we can validate and clean it (Activity 2, Steps 4-5).
+Known issues it contains are catalogued in the validation report produced by
+activity2_synthetic.py.
